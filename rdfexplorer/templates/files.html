@@ -1,0 +1,14 @@
+<ul>
+    <li>
+        <a href="{{ parent }}">
+            ..
+        </a>
+    </li>
+    {% for file in files %}
+    <li>
+        <a href="{{ (request.path + '/' if request.path != '/' else '') + file }}">
+            {{ (request.path + '/' if request.path != '/' else '') + file }}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
