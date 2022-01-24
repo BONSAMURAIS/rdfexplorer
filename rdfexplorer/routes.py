@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 from flask import Blueprint, abort, send_file, render_template, request, current_app
+from requests import get
 
 bp = Blueprint('routes', __name__, )
 
@@ -13,10 +14,6 @@ def dir_listing(req_path):
 
     # Joining the base and the requested path
     abs_path = base_dir / req_path
-
-    # Return 404 if path doesn't exist
-    if not abs_path.exists():
-        return abort(404)
 
     # Find best media type (default 'text/turtle')
     best = request.accept_mimetypes.best_match(['text/turtle', 'application/rdf+xml'])
@@ -37,8 +34,28 @@ def dir_listing(req_path):
     if abs_path.is_file():
         return send_file(abs_path)
 
-    # Show directory contents
-    current_path = Path(req_path)
-    parent = '/' + str(current_path.parent)
-    files = os.listdir(abs_path)
-    return render_template('files.html', files=files, parent=parent)
+    if abs_path.exists():
+        # Show directory contents
+        current_path = Path(req_path)
+        parent = '/' + str(current_path.parent)
+        files = os.listdir(abs_path)
+        return render_template('files.html', files=files, parent=parent)
+
+    # Try to run query
+    query = f'select * where {{ VALUES ?s {{ <http://rdf.bonsai.uno/{req_path}>}} ?s ?p ?o }}'
+
+    url = f'{current_app.config["SPARQL_HOST"]}/sparql'
+    data = {
+        'default-graph-uri': '',
+        'query': query,
+        'format': 'text/html',
+        'timeout': 0,
+        'debug': 'on',
+        'run': 'Run Query'
+    }
+    sparql_response = get(url, params=data)
+    if sparql_response.ok:
+        return sparql_response.content
+
+    # Return 404 if nothing matches
+    return abort(404)
