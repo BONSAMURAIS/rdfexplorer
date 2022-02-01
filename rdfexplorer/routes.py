@@ -9,7 +9,7 @@ bp = Blueprint('routes', __name__, )
 
 @bp.route('/', defaults={'req_path': ''})
 @bp.route('/<path:req_path>')
-def dir_listing(req_path):
+def file_query_or_dir(req_path):
     base_dir = Path(current_app.config['RDF_DATA_DIR'])
 
     # Joining the base and the requested path
@@ -41,10 +41,26 @@ def dir_listing(req_path):
         files = os.listdir(abs_path)
         return render_template('files.html', files=files, parent=parent)
 
-    # Try to run query
-    query = f'select * where {{ VALUES ?s {{ <http://rdf.bonsai.uno/{req_path}>}} ?s ?p ?o }}'
-
     url = f'{current_app.config["SPARQL_HOST"]}/sparql'
+    domain_name = current_app.config['DOMAIN_NAME']
+
+    # Check if the url is a graph
+    is_graph_query = f'ASK WHERE {{ GRAPH <{domain_name}/{req_path}> {{ ?s ?p ?o }} }}'
+    is_graph_data = {
+        'default-graph-uri': '',
+        'query': is_graph_query,
+        'format': 'text/json',
+        'timeout': 0,
+        'debug': 'on',
+        'run': 'Run Query'
+    }
+    is_graph_response = get(url, params=is_graph_data)
+    if is_graph_response.ok and is_graph_response.content == 'true':
+        query = f'SELECT * WHERE {{ GRAPH <{domain_name}/{req_path}>{{?s ?p ?o }} }}'
+    else:
+        query = f'SELECT * WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
+    
+    # Run graph or node query
     data = {
         'default-graph-uri': '',
         'query': query,
