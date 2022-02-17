@@ -11,7 +11,7 @@ RUN pip install -r requirements.txt
 
 # copy project
 COPY rdfexplorer ${WD}/rdfexplorer
-COPY app.py config.py ${WD}
+COPY app.py config.py ${WD}/
 
 # Create the rdf data volume
 VOLUME ["/rdf_data"]
