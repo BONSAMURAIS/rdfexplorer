@@ -43,35 +43,40 @@ def file_query_or_dir(req_path):
 
     url = f'{current_app.config["SPARQL_HOST"]}/sparql'
     domain_name = current_app.config['DOMAIN_NAME']
+    query = None
 
     # Check if the url is a graph
     is_graph_query = f'ASK WHERE {{ GRAPH <{domain_name}/{req_path}> {{ ?s ?p ?o }} }}'
-    is_graph_data = {
-        'default-graph-uri': '',
-        'query': is_graph_query,
-        'format': 'text/json',
-        'timeout': 0,
-        'debug': 'on',
-        'run': 'Run Query'
-    }
-    is_graph_response = get(url, params=is_graph_data)
-    if is_graph_response.ok and is_graph_response.content == 'true':
+    is_graph_response = get(url, params=get_graph_params(is_graph_query, 'json'))
+
+    if is_graph_response.ok and is_graph_response.json() is True:
         query = f'SELECT * WHERE {{ GRAPH <{domain_name}/{req_path}>{{?s ?p ?o }} }}'
     else:
-        query = f'SELECT * WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
-    
+        # Check if the url is a value
+        is_value_query = f'ASK WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
+        is_value_response = get(url, params=get_graph_params(is_value_query, 'json'))
+
+        if is_value_response.ok and is_value_response.json() is True:
+            query = f'SELECT * WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
+
+    # Return 404 if nothing matches
+    if query is None:
+        return abort(404)
+
     # Run graph or node query
-    data = {
-        'default-graph-uri': '',
-        'query': query,
-        'format': 'text/html',
-        'timeout': 0,
-        'debug': 'on',
-        'run': 'Run Query'
-    }
-    sparql_response = get(url, params=data)
+    sparql_response = get(url, params=get_graph_params(query, 'html'))
     if sparql_response.ok:
         return sparql_response.content
 
-    # Return 404 if nothing matches
     return abort(404)
+
+
+def get_graph_params(query, format):
+    return {
+        'default-graph-uri': '',
+        'query': query,
+        'format': f'text/{format}',
+        'timeout': 0,
+        'debug': 'on',
+        'run': 'Run Query'
+    }
