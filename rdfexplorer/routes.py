@@ -47,14 +47,14 @@ def file_query_or_dir(req_path):
 
     # Check if the url is a graph
     is_graph_query = f'ASK WHERE {{ GRAPH <{domain_name}/{req_path}> {{ ?s ?p ?o }} }}'
-    is_graph_response = get(url, params=get_graph_params(is_graph_query, 'json'))
+    is_graph_response = get(url, params=get_graph_params(is_graph_query, 'text/json'))
 
     if is_graph_response.ok and is_graph_response.json() is True:
-        query = f'SELECT * WHERE {{ GRAPH <{domain_name}/{req_path}>{{?s ?p ?o }} }}'
+        query = f'CONSTRUCT {{ ?s ?p ?o}} WHERE {{ GRAPH <{domain_name}/{req_path}>{{?s ?p ?o }} }}'
     else:
         # Check if the url is a value
         is_value_query = f'ASK WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
-        is_value_response = get(url, params=get_graph_params(is_value_query, 'json'))
+        is_value_response = get(url, params=get_graph_params(is_value_query, 'text/json'))
 
         if is_value_response.ok and is_value_response.json() is True:
             query = f'SELECT * WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
@@ -64,7 +64,7 @@ def file_query_or_dir(req_path):
         return abort(404)
 
     # Run graph or node query
-    sparql_response = get(url, params=get_graph_params(query, 'html'))
+    sparql_response = get(url, params=get_graph_params(query, request.accept_mimetypes.to_header()))
     if sparql_response.ok:
         return sparql_response.content
 
@@ -75,7 +75,7 @@ def get_graph_params(query, format):
     return {
         'default-graph-uri': '',
         'query': query,
-        'format': f'text/{format}',
+        'format': f'{format}',
         'timeout': 0,
         'debug': 'on',
         'run': 'Run Query'
