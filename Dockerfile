@@ -20,7 +20,7 @@ VOLUME ["/rdf_data"]
 ENV FLASK_APP app.py
 ENV FLASK_ENV production
 ENV RDF_DATA_DIR /rdf_data
-ENV SPARQL_HOST http://odas.aau.dk
+ENV SPARQL_HOST http://new.odas.aau.dk
 
 EXPOSE 5000/tcp
 
