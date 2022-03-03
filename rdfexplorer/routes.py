@@ -50,14 +50,16 @@ def file_query_or_dir(req_path):
     is_graph_response = get(url, params=get_graph_params(is_graph_query, 'text/json'))
 
     if is_graph_response.ok and is_graph_response.json() is True:
-        query = f'CONSTRUCT {{ ?s ?p ?o}} WHERE {{ GRAPH <{domain_name}/{req_path}>{{?s ?p ?o }} }}'
+        query = f'CONSTRUCT {{  GRAPH <{domain_name}/{req_path}>  {{ ?s ?p ?o }}  }} ' \
+                f'WHERE {{ GRAPH <{domain_name}/{req_path}> {{?s ?p ?o }} }}'
     else:
         # Check if the url is a value
         is_value_query = f'ASK WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
         is_value_response = get(url, params=get_graph_params(is_value_query, 'text/json'))
 
         if is_value_response.ok and is_value_response.json() is True:
-            query = f'SELECT * WHERE {{ VALUES ?s {{ <{domain_name}/{req_path}>}} ?s ?p ?o }}'
+            query = f'CONSTRUCT {{ GRAPH ?g  {{ ?s ?p ?o }} }}  ' \
+                    f'WHERE  {{  VALUES ?s {{ <{domain_name}/{req_path}> }} GRAPH ?g {{ ?s ?p ?o }} }}'
 
     # Return 404 if nothing matches
     if query is None:
